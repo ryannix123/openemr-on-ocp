@@ -60,14 +60,16 @@ COPY openemr.conf /etc/apache2/conf.d/
 #add runner and auto_configure and prevent auto_configure from being run w/o being enabled
 COPY openemr.sh ssl.sh xdebug.sh auto_configure.php /var/www/localhost/htdocs/openemr/
 COPY utilities/unlock_admin.php utilities/unlock_admin.sh /root/
+RUN chgrp -R 0 /var/www/localhost/htdocs/openemr/ && \
+    chmod -R g=u /var/www/localhost/htdocs/openemr/
 # chown & chmod permissions
 # RUN chown -R 1000:apache /var/www/localhost/htdocs/openemr
 # RUN chmod -R 775 /var/www/localhost/htdocs/openemr
 # Fix permissions for OCP
 # RUN chgrp -R 1000 openemr.sh ssl.sh xdebug.sh /root/unlock_admin.sh \
 #    && chmod -R g=u auto_configure.php /root/unlock_admin.php
-RUN chmod 500 openemr.sh ssl.sh xdebug.sh /root/unlock_admin.sh \
-    && chmod 000 auto_configure.php /root/unlock_admin.php
+RUN chmod 775 openemr.sh ssl.sh xdebug.sh /root/unlock_admin.sh \
+    && chmod 775 auto_configure.php /root/unlock_admin.php
 # bring in pieces used for automatic upgrade process
 COPY upgrade/docker-version \
      upgrade/fsupgrade-1.sh \
@@ -86,6 +88,7 @@ RUN chmod 500 \
 RUN mkdir -p /run/apache2
 #Copy dev tools library to root
 COPY utilities/devtoolsLibrary.source /root/
+RUN chmod 775 /root/devtoolsLibrary.source
 #Ensure swarm/orchestration pieces are available if needed
 RUN mkdir /swarm-pieces \
     && rsync --owner --group --perms --delete --recursive --links /etc/ssl /swarm-pieces/ \
