@@ -11,7 +11,8 @@ RUN apk add --no-cache \
     perl mysql-client tar curl imagemagick nodejs npm \
     python3 openssl py-pip openssl-dev dcron \
     rsync shadow ncurses \
-    && sed -i 's/^Listen 80$/Listen 0.0.0.0:80/' /etc/apache2/httpd.conf
+    && sed -i 's/^Listen 80$/Listen 0.0.0.0:8080/' /etc/apache2/httpd.conf \
+    && sed -i 's/^Listen 443$/Listen 0.0.0.0:8443/' /etc/apache2/conf.d/ssl.conf
 # Needed to ensure permissions work across shared volumes with openemr, nginx, and php-fpm dockers
 RUN usermod -u 1000 apache
 
@@ -42,9 +43,9 @@ RUN apk add --no-cache git build-base libffi-dev python3-dev cargo \
     && chmod 666 openemr/sites/default/sqlconf.php \
     && chown -R apache openemr/ \
     && mv openemr /var/www/localhost/htdocs/ \
-    && git clone https://github.com/letsencrypt/letsencrypt --depth 1 /opt/certbot \
+ #   && git clone https://github.com/letsencrypt/letsencrypt --depth 1 /opt/certbot \
     && pip install --upgrade pip \
-    && pip install -e /opt/certbot/acme -e /opt/certbot/certbot \
+ #   && pip install -e /opt/certbot/acme -e /opt/certbot/certbot \
     && mkdir -p /etc/ssl/certs /etc/ssl/private \
     && apk del --no-cache git build-base libffi-dev python3-dev cargo \
     && sed -i 's/^ *CustomLog/#CustomLog/' /etc/apache2/httpd.conf \
@@ -52,7 +53,7 @@ RUN apk add --no-cache git build-base libffi-dev python3-dev cargo \
     && sed -i 's/^ *CustomLog/#CustomLog/' /etc/apache2/conf.d/ssl.conf \
     && sed -i 's/^ *TransferLog/#TransferLog/' /etc/apache2/conf.d/ssl.conf
 WORKDIR /var/www/localhost/htdocs/openemr
-VOLUME [ "/etc/letsencrypt/", "/etc/ssl" ]
+#VOLUME [ "/etc/letsencrypt/", "/etc/ssl" ]
 #configure apache & php properly
 ENV APACHE_LOG_DIR=/var/log/apache2
 COPY php.ini /etc/php82/php.ini
@@ -70,6 +71,13 @@ RUN chgrp -R 0 /var/www/localhost/htdocs/openemr/ && \
 #    && chmod -R g=u auto_configure.php /root/unlock_admin.php
 RUN chmod 775 openemr.sh ssl.sh xdebug.sh /root/unlock_admin.sh \
     && chmod 775 auto_configure.php /root/unlock_admin.php
+# change permissions
+RUN chgrp -R 0 /etc/ssl/ \
+    && chmod -R g=u /etc/ssl/
+# RUN chgrp -R 0 /etc/ssl/private \
+#    && chmod -R g=u /etc/ssl/private
+# RUN chgrp -R 0 /etc/ssl/certs \
+#    && chmod -R g=u /etc/ssl/certs
 # bring in pieces used for automatic upgrade process
 COPY upgrade/docker-version \
      upgrade/fsupgrade-1.sh \
@@ -89,6 +97,8 @@ RUN mkdir -p /run/apache2
 #Copy dev tools library to root
 COPY utilities/devtoolsLibrary.source /root/
 RUN chmod 775 /root/devtoolsLibrary.source
+RUN chgrp -R 0 /root/ && \
+    chmod -R g=u /root/
 #Ensure swarm/orchestration pieces are available if needed
 RUN mkdir /swarm-pieces \
     && rsync --owner --group --perms --delete --recursive --links /etc/ssl /swarm-pieces/ \
